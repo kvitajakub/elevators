@@ -7,11 +7,11 @@ class Elevator:
         self.direction = 0
 
     def status(self):
-        # TODO return back
         # return [self.floor, self.goals[0]]
         return [self.floor] + [self.goals]
 
     def addGoal(self, goal):
+        #skip the None, keep it at the end
         self.goals.insert(-1,goal)
         self.sortGoals()
 
@@ -20,63 +20,89 @@ class Elevator:
         Some sort of scheduling system for one elevator, probably trying to maximize movement in one direction.
         Remove redundancies, each floor only once.
         '''
-        # TODO ADD SORTING ALGORITHM
+        # SORTING ALGORITHM
         lowerGoals = []
         higherGoals = []
         #remove none and duplicates
         self.goals.remove(None)
         self.goals = list(set(self.goals))
 
+        #split into two lists
         for goal in self.goals:
             if goal > self.floor:
                 higherGoals.append(goal)
             elif goal < self.floor:
                 lowerGoals.append(goal)
 
+        #sort lists properly
         higherGoals.sort()
         lowerGoals.sort()
         lowerGoals.reverse()
 
+        #decide how to add them back
         if self.direction == 1:
             self.goals = higherGoals + lowerGoals
         else:
             self.goals = lowerGoals + higherGoals
 
+        #return None back
         self.goals.append(None)
 
+        #set the direction based of the first goal
         if self.goals[0] != None:
             self.direction = -1 if self.floor > self.goals[0] else 1
+        else:
+            self.direction = 0
 
 
     def step(self):
         '''
         Perform one step of simulation.
         '''
+        # if elevator have task, move
         if self.goals[0] != None:
             self.floor += self.direction
             if self.floor == self.goals[0]:
+                #remove task if elevator reached the destination
                 self.goals.pop(0)
                 if self.goals[0] != None:
+                    #change direction if next task is in opposite direction
                     self.direction = -1 if self.floor > self.goals[0] else 1
                 else:
+                    #or stop if there are no tasks
                     self.direction = 0
+
+
 
 class ElevatorControlSystem:
     def __init__(self, elevators=4):
+        '''
+        Elevator Control system need to know how many elevators have to be created. Specify as parameter.
+        '''
         self.elevators = []
         for i in range(elevators):
             self.elevators.append(Elevator())
 
+
     def status(self):
+        '''
+        Return the status of the elevators  as list of lists
+        [
+            [ID, CurrentFloor, goalList],
+            [ID, CurrentFloor, goalList],
+            [ID, CurrentFloor, goalList],
+            ...
+        ]
+        '''
         data = []
         for i in range(len(self.elevators)):
             data.append([i] + self.elevators[i].status())
         return data
 
+
     def update(self, ID, floor=None, newGoal=None):
         '''
-        How can update() change floor of the elevator? Physically imposible, but okay.
-        Add the new goal to the elevator.
+        Update the elevator with ID. Put it on floor speficied and add a new goal to the list.
         '''
         if ID < 0 or ID >= len(self.elevators):
             raise Exception('No elevator with ID = ' + str(ID))
@@ -93,6 +119,7 @@ class ElevatorControlSystem:
         It is going to be the closest one not going in the opposite direction.
         If every elevator is going in opposite direction, pick one with shortest goal list.
         '''
+        #change the input range
         direction = -1 if direction<0 else 1
 
         bestElev = None
@@ -102,7 +129,7 @@ class ElevatorControlSystem:
             if (elevator.direction == 0) or \
                (elevator.direction == direction and direction == -1 and elevator.floor > floor) or \
                (elevator.direction == direction and direction == 1 and elevator.floor < floor):
-               #if it is best suitable elevator
+               #pick it if it is the best suitable elevator
                 if bestDiff > abs(elevator.floor-floor):
                     bestDiff = abs(elevator.floor-floor)
                     bestElev = elevator
@@ -115,7 +142,7 @@ class ElevatorControlSystem:
                     bestDiff = len(elevator.goals)
                     bestElev = elevator
 
-        # add it to the picked elevator
+        # add the job to the picked elevator
         bestElev.addGoal(floor)
 
 
@@ -127,26 +154,44 @@ class ElevatorControlSystem:
             elevator.step()
 
 
-
 if __name__ == "__main__":
     x = ElevatorControlSystem(3)
-    print(x.status())
     x.update(0,0)
     x.update(1,4)
     x.update(2,8)
     print(x.status())
-    for i in range(5):
-        x.step()
-        print(x.status())
+
+    x.pickup(0,1)
+    x.pickup(3,-1)
     x.pickup(6,1)
-    print(x.status())
-    x.pickup(6,1)
-    print(x.status())
-    x.update(0,2,6)
-    print(x.status())
-    x.pickup(6,1)
+    x.pickup(5,-1)
+    x.pickup(1,1)
+
     print(x.status())
 
-    for i in range(5):
+    for i in range(3):
+        x.step()
+        print(x.status())
+
+    x.update(0,newGoal=5)
+    x.update(1,newGoal=0)
+    x.update(2,newGoal=7)
+
+    print(x.status())
+
+    for i in range(3):
+        x.step()
+        print(x.status())
+
+    x.pickup(0,1)
+    x.pickup(3,-1)
+    x.pickup(6,1)
+    x.pickup(6,-1)
+    x.pickup(5,-1)
+    x.pickup(1,1)
+
+    print(x.status())
+
+    for i in range(3):
         x.step()
         print(x.status())
